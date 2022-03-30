@@ -15,6 +15,45 @@ instance_1, instance_2, instance_3 = pd.read_excel(path,"Instance 1"), pd.read_e
 # print(instance_3)
 # Define start time: 7:30 a.m.
 
+df = pd.DataFrame(instance_1)
+
+# Processing type
+tempProcessType = []
+process_type = []
+processIdx = 1
+while df.columns[processIdx] != 'Splitting Timing':
+    col_name = df.columns[processIdx]
+    tempProcessType.append(instance_1[col_name])
+    processIdx += 1
+processIdx += 1
+for i in range(1,len(tempProcessType[0])):
+    concat = []
+    for j in range(0,len(tempProcessType)):
+        if pd.isna(tempProcessType[j][i]) == False:
+            concat.append(tempProcessType[j][i])
+    process_type.append(concat)
+print(process_type)
+
+# Processing time
+tempProcessTime = []
+processing_time = []
+while df.columns[processIdx] != 'Due Time':
+    col_name = df.columns[processIdx]
+    tempProcessTime.append(instance_1[col_name])
+    processIdx += 1
+for i in range(1,len(tempProcessTime[0])):
+    concat = []
+    for j in range(0,len(tempProcessTime)):
+        if pd.isna(tempProcessTime[j][i]) == False:
+            concat.append(tempProcessTime[j][i])
+    processing_time.append(concat)
+print(processing_time)
+
+# Splitting timing
+splitting_timing = np.array(instance_1["Splitting Timing"])
+splitting_timing = splitting_timing[~np.isnan(splitting_timing)]
+# print(splitting_timing)
+
 # Due time
 start_time = 470
 tempDue = list(instance_1['Due Time'])
@@ -26,10 +65,11 @@ for i in tempDue:
     due_time = np.append(due_time,converted)
 # print(due_time)
 
-# Splitting timimg
-splitting_timing = np.array(instance_1["Splitting Timing"])
-splitting_timing = splitting_timing[~np.isnan(splitting_timing)]
-# print(splitting_timing)
+# For problem 1 we define finish time as the sum of processing time
+finish_time = np.array([])
+for i in processing_time:
+    finish_time = np.append(finish_time,sum(i))
+print(finish_time)
 
 # Solving
 
