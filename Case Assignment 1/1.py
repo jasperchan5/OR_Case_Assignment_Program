@@ -1,5 +1,4 @@
 # Import libraries
-from cmath import nan
 import gurobipy
 import pandas as pd
 import numpy as np
@@ -32,7 +31,7 @@ for i in range(1,len(tempProcessType[0])):
         if pd.isna(tempProcessType[j][i]) == False:
             concat.append(tempProcessType[j][i])
     process_type.append(concat)
-print(process_type)
+print("\nProcess type:\n",process_type)
 
 # Processing time
 tempProcessTime = []
@@ -47,12 +46,12 @@ for i in range(1,len(tempProcessTime[0])):
         if pd.isna(tempProcessTime[j][i]) == False:
             concat.append(tempProcessTime[j][i])
     processing_time.append(concat)
-print(processing_time)
+print("\nProcessing time:\n",processing_time)
 
 # Splitting timing
 splitting_timing = np.array(instance_1["Splitting Timing"])
 splitting_timing = splitting_timing[~np.isnan(splitting_timing)]
-# print(splitting_timing)
+print("\nSplitting timing:\n",splitting_timing)
 
 # Due time
 start_time = 470
@@ -63,13 +62,13 @@ for i in tempDue:
     # Subtract the due time with start time so that we can count from 0
     converted = i.hour * 60 + i.minute - start_time
     due_time = np.append(due_time,converted)
-# print(due_time)
+print("\nDue time:\n",due_time)
 
 # For problem 1 we define finish time as the sum of processing time
 finish_time = np.array([])
 for i in processing_time:
     finish_time = np.append(finish_time,sum(i))
-print(finish_time)
+print("\nFinish time:\n",finish_time)
 
 # Solving
 
