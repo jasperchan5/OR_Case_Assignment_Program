@@ -44,7 +44,7 @@ for i in range(1,len(tempProcessTime[0])):
     concat = []
     for j in range(0,len(tempProcessTime)):
         if pd.isna(tempProcessTime[j][i]) == False:
-            concat.append(tempProcessTime[j][i])
+            concat.append(tempProcessTime[j][i]*60)
     processing_time.append(concat)
 print("\nProcessing time:\n",processing_time)
 
