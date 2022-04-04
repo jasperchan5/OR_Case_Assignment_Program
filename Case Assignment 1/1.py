@@ -9,8 +9,8 @@ path = os.path.join(pre, fname)
 
 # Data reading
 data = [pd.read_excel(path,"Instance 1"), pd.read_excel(path,"Instance 2"), pd.read_excel(path,"Instance 3")]
-for instance in len(0,1):
-    print(instance)
+for i_count, instance in enumerate(data):
+    # print(instance)
     df = pd.DataFrame(instance)
 
     # Processing type
@@ -28,11 +28,11 @@ for instance in len(0,1):
             if pd.isna(tempProcessType[j][i]) == False:
                 concat.append(tempProcessType[j][i])
         process_type.append(concat)
-    print("\nProcess type:\n",process_type)
+    # print("\nProcess type:\n",process_type)
 
     # Processing time
     tempProcessTime = []
-    processing_time = []
+    processing_time = [] # 2 dimensional array
     while df.columns[processIdx] != 'Due Time':
         col_name = df.columns[processIdx]
         tempProcessTime.append(instance[col_name])
@@ -43,12 +43,12 @@ for instance in len(0,1):
             if pd.isna(tempProcessTime[j][i]) == False:
                 concat.append(tempProcessTime[j][i]*60)
         processing_time.append(concat)
-    print("\nProcessing time:\n",processing_time)
+    # print("\nProcessing time:\n",processing_time)
 
     # Splitting timing
     splitting_timing = np.array(instance["Splitting Timing"])
     splitting_timing = splitting_timing[~np.isnan(splitting_timing)]
-    print("\nSplitting timing:\n",splitting_timing)
+    # print("\nSplitting timing:\n",splitting_timing)
 
     # Due time
     # Define start time: 7:30 a.m.
@@ -60,96 +60,89 @@ for instance in len(0,1):
         # Subtract the due time with start time so that we can count from 0
         converted = i.hour * 60 + i.minute - start_time
         due_time.append(converted)
-    print("\nDue time:\n",due_time)
-
-    # For problem 1 we define finish time as the sum of processing time
-    finish_time = []
-    for i in processing_time:
-        finish_time.append(sum(i))
-    print("\nFinish time:\n",finish_time)
-
+    # print("\nDue time:\n",due_time)
 
     # Solving
     model_1 = gb.Model("model_1")
 
     # Define job and machine
-    job = range(1,13)
+    job = [range(1,13),range(1,12),range(1,11)]
     machine = range(2,6)
 
     # Define x-jk: job j be assigned to machine k
-    x = []
-    for j in range(0,len(job)):
-        x_2 = []
-        for k in range(0,len(machine)):
-            x_2.append(model_1.addVar(lb = 0, vtype = gb.GRB.BINARY, name = "x" + str(j+1) + str(k+1)))
-        x.append(x_2)
-
+    x = model_1.addVars(job[i_count], machine, vtype = gb.GRB.BINARY,name="x")
+    
     # Define y-ijk: job j be done after job i on the same machine k
-    y = []
-    for i in range(0,len(job)):
-        for j in range(i,len(job)):
-            y_2 = []
-            for k in range(0,len(machine)):
-                y_2.append(model_1.addVar(lb = 0, vtype = gb.GRB.BINARY, name = "y" + str(i+1) + str(j+1) + str(k+1)))
-            y.append(y_2)
+    y = model_1.addVars(job[i_count], job[i_count], vtype = gb.GRB.BINARY,name="y")
 
     # Define tj: job j is tardy or not
-    t = []
-    for j in range(0,len(job)):
-        t.append(model_1.addVar(lb = 0, vtype = gb.GRB.BINARY, name = "t" + str(j+1)))
+    t = model_1.addVars(job[i_count], vtype = gb.GRB.BINARY,name="t")
+    
+    # Define fj: finish time of job j
+    f = model_1.addVars(job[i_count], vtype = gb.GRB.INTEGER,name="f")
         
     # Objective function
     model_1.setObjective(
-        gb.quicksum(t[j] for j in range(0,len(job)))
+        gb.quicksum(t)
         , gb.GRB.MINIMIZE) 
-
+    
     # Add constraints and name them
+    jobLen, machineLen = len(job[i_count])+1, len(machine)+1
+    print(jobLen)
     M = 999999
-    model_1.addConstrs((finish_time[j] - due_time[j] <= M*t[j] for j in range(0,len(job))), "tardyOrNot")
+    for j in range(1,jobLen):
+        model_1.addConstr(M*t[j] >= f[j] - due_time[j-1])
 
     # x_ik + x_jk >= 2*(y_ij + y_ji) forall i, j 
-    for i in range(0,len(job)):
-        for j in range(i,len(job)):
-            for k in range(0,len(machine)):   
-                model_1.addConstr((x[i][k] + x[j][k] >= 2*(y[i][j]+y[j][i])), "B")
+    for i in range(1,jobLen):
+        for j in range(i+1,jobLen):
+            for k in range(2,machineLen):
+                model_1.addConstr((x[i,k] + x[j,k] >= 2*(y[i,j]+y[j,i])), "B")
 
 
     # x_ik + x_jk - 1 <= y_ij + y_ji forall i, j, k
-    for i in range(0, len(job)):
-        for j in range(i, len(job)):
-            for k in range(0, len(machine)):
-                model_1.addConstr((x[i][k] - x[j][k] - 1) <= (y[i][j] + y[j][i]), "C")  
+    for i in range(1, jobLen):
+        for j in range(i, jobLen):
+            for k in range(2, machineLen):
+                model_1.addConstr((x[i,k] - x[j,k] - 1) <= (y[i,j] + y[j,i]), "C")  
     
     # y_ij + y_ji <= 1 forall i, j
-    for i in range(0, job):
-        for j in range(i, job):
-            model_1.addConstr((y[i][j] + y[j][i]) <= 1, "D")
+    for i in range(1, jobLen):
+        for j in range(i, jobLen):
+            model_1.addConstr((y[i,j] + y[j,i]) <= 1, "D")
     
     #sigma(x_jk) = 1 forall j
-    for k in range(0, machine):
-        for j in range(0, job):
-            model_1.addConstr((gb.quicksum(x[j][k]) == 1), "E")
+    model_1.addConstr((gb.quicksum(x) == 1), "E")
     
     # f_i + p_j - f_j <= M(1 - y_ij)
-    for i in range(0, job):
-        for j in range(i, job):
-            model_1.addConstr((finish_time[i] + processing_time[j] - finish_time[j]) <= M * (1 - y[i][j]), "F")
+    for i in range(1, jobLen):
+        for j in range(i, jobLen):
+            model_1.addConstr((f[i] + sum(processing_time[j-1]) - f[j]) <= M * (1 - y[i,j]), "F")
     
     # f_j >= p_j + C
-    for j in range(0, job):
-        model_1.addConstr(finish_time[j] >= (processing_time[j] + start_time), "G")
+    for j in range(1, jobLen):
+        model_1.addConstr(f[j] >= (sum(processing_time[j-1]) + start_time), "G")
     
     # x_j1 <= Typej
-    for j in range(0, job):
-        model_1.addConstr((x[j][0] <= process_type[j]), "H")
+    # for j in range(1, jobLen):
+    #     model_1.addConstr((x[j,1] <= process_type[j-1]), "H")
 
     model_1.optimize()
 
     print("Result:")
-
-    for i in t:
-        print(i.varName, '=', i.x)
+    # print("\nDistribution:")
+    # for xx in x:
+    #     print(x[xx].varName,'=',x[xx].X)
+    # print("\nDistribution_2:")
+    # for yy in y:
+    #     print(y[yy].varName,'=',y[yy].X)
+    print("\nTardy count:")
+    for tt in t:
+        print(t[tt].varName,'=',t[tt].X)
+    print("\nFinish time:")
+    for ff in f:
+        print(f[ff].varName,'=',f[ff].X)
     # head of the result table
 
 
-    print("z* =", model_1.objVal)    # print objective value
+    print("\nz* =", model_1.ObjVal)    # print objective value
