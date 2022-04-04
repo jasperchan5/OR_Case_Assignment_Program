@@ -8,7 +8,8 @@ fname = 'OR110-1_case01.xlsx'
 path = os.path.join(pre, fname)
 
 def P2_Solve():
-    result = []
+    tardy_result = []
+    makespan_result = []
     # Data reading
     data = [pd.read_excel(path,"Instance 1"), pd.read_excel(path,"Instance 2"), pd.read_excel(path,"Instance 3")]
     for i_count, instance in enumerate(data):
@@ -128,7 +129,7 @@ def P2_Solve():
         
         # f_j >= p_j + C
         for j in range(1, jobLen):
-            model_1.addConstr(f[j] >= (sum(processing_time[j-1]) + start_time), "G")
+            model_1.addConstr(f[j] >= (sum(processing_time[j-1]) + 200), "G")
         
         # x_j1 <= Typej
         # for j in range(1, jobLen):
@@ -154,6 +155,7 @@ def P2_Solve():
         # head of the result table
 
         t_result = model_1.ObjVal
+        tardy_result.append(t_result)
         # print("\nz* =", t_result)    # print objective value
         # print("==========================")
         # Solving 2
@@ -217,7 +219,7 @@ def P2_Solve():
         
         # f_j >= p_j + C
         for j in range(1, jobLen):
-            model_2.addConstr(f[j] >= (sum(processing_time[j-1]) + start_time), "G")
+            model_2.addConstr(f[j] >= (sum(processing_time[j-1]) + 200), "G")
         
         # sum(tj) <= t
         model_2.addConstr(t.sum() <= t_result, "H")
@@ -250,5 +252,5 @@ def P2_Solve():
         real_w_hour, real_w_min = int(w_result/60) ,int(w_result%60)
         # print("\nz* =", f"{real_w_hour}:{real_w_min}")    # print objective value
         
-        result.append([real_w_hour,real_w_min])
-    return result
+        makespan_result.append([real_w_hour,real_w_min])
+    return tardy_result, makespan_result
