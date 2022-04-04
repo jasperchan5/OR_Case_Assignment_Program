@@ -9,7 +9,7 @@ path = os.path.join(pre, fname)
 
 # Data reading
 data = [pd.read_excel(path,"Instance 1"), pd.read_excel(path,"Instance 2"), pd.read_excel(path,"Instance 3")]
-for instance in data:
+for instance in len(0,1):
     print(instance)
     df = pd.DataFrame(instance)
 
@@ -106,12 +106,43 @@ for instance in data:
     # Add constraints and name them
     M = 999999
     model_1.addConstrs((finish_time[j] - due_time[j] <= M*t[j] for j in range(0,len(job))), "tardyOrNot")
-        
-    # for i in range(0,len(job)):
-    #     for j in range(i,len(job)):
-    #         for k in range(0,len(machine)):   
-    #             model_1.addConstrs((x[i][k] + x[j][k] >= 2*(y[i][j]+y[j][i])), "B")
-                
+
+    # x_ik + x_jk >= 2*(y_ij + y_ji) forall i, j 
+    for i in range(0,len(job)):
+        for j in range(i,len(job)):
+            for k in range(0,len(machine)):   
+                model_1.addConstr((x[i][k] + x[j][k] >= 2*(y[i][j]+y[j][i])), "B")
+
+
+    # x_ik + x_jk - 1 <= y_ij + y_ji forall i, j, k
+    for i in range(0, len(job)):
+        for j in range(i, len(job)):
+            for k in range(0, len(machine)):
+                model_1.addConstr((x[i][k] - x[j][k] - 1) <= (y[i][j] + y[j][i]), "C")  
+    
+    # y_ij + y_ji <= 1 forall i, j
+    for i in range(0, job):
+        for j in range(i, job):
+            model_1.addConstr((y[i][j] + y[j][i]) <= 1, "D")
+    
+    #sigma(x_jk) = 1 forall j
+    for k in range(0, machine):
+        for j in range(0, job):
+            model_1.addConstr((gb.quicksum(x[j][k]) == 1), "E")
+    
+    # f_i + p_j - f_j <= M(1 - y_ij)
+    for i in range(0, job):
+        for j in range(i, job):
+            model_1.addConstr((finish_time[i] + processing_time[j] - finish_time[j]) <= M * (1 - y[i][j]), "F")
+    
+    # f_j >= p_j + C
+    for j in range(0, job):
+        model_1.addConstr(finish_time[j] >= (processing_time[j] + start_time), "G")
+    
+    # x_j1 <= Typej
+    for j in range(0, job):
+        model_1.addConstr((x[j][0] <= process_type[j]), "H")
+
     model_1.optimize()
 
     print("Result:")
