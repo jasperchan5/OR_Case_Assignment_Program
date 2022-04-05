@@ -57,7 +57,7 @@ def P1_Solve():
 
         # Due time
         # Define start time: 7:30 a.m.
-        start_time = 470
+        start_time = 450
         tempDue = list(instance['Due Time'])
         tempDue.remove(np.nan)
         due_time = []
@@ -92,43 +92,50 @@ def P1_Solve():
             , gb.GRB.MINIMIZE) 
         
         # Add constraints and name them
-        jobLen, machineLen = len(job[i_count])+1, len(machine)+1
+        jobLen, machineLen = len(job[i_count])+1, len(machine)+2
 
         # fj - dj <= M*tj
         M = 99999
         for j in range(1,jobLen):
-            model_1.addConstr(f[j] - due_time[j-1] <= M*t[j])
+            model_1.addConstr(f[j] - due_time[j-1] <= M*t[j], "A")
+
+        # for i in range(1,jobLen):
+        #     model_1.addConstr(y[i,i] == 0)
 
         # x_ik + x_jk >= 2*(y_ij + y_ji) forall i, j 
-        for k in range(2,machineLen):
-            for i in range(1,jobLen):
-                for j in range(i+1,jobLen):
-                    model_1.addConstr((x[i,k] + x[j,k] >= 2*(y[i,j]+y[j,i])), "B")
+        # for k in range(2,machineLen):
+        #     for i in range(1,jobLen):
+        #         for j in range(1,jobLen):
+        #             if i != j:
+        #                 model_1.addConstr((x[i,k] + x[j,k] >= 2*(y[i,j]+y[j,i])), "B")
 
 
         # x_ik + x_jk - 1 <= y_ij + y_ji forall i, j, k
-        for i in range(1, jobLen):
-            for j in range(i, jobLen):
-                for k in range(2, machineLen):
-                    model_1.addConstr((x[i,k] + x[j,k] - 1) <= (y[i,j] + y[j,i]), "C")  
+        for k in range(2, machineLen):
+            for i in range(1, jobLen):
+                for j in range(1, jobLen):
+                    if i != j:
+                        model_1.addConstr((x[i,k] + x[j,k] - 1) <= (y[i,j] + y[j,i]), "C")  
         
         # y_ij + y_ji <= 1 forall i, j
         for i in range(1, jobLen):
-            for j in range(i, jobLen):
-                model_1.addConstr((y[i,j] + y[j,i]) <= 1, "D")
+            for j in range(1, jobLen):
+                if i != j:
+                    model_1.addConstr((y[i,j] + y[j,i]) <= 1, "D")
         
         #sigma(x_jk) = 1 forall j
         for j in range(1,jobLen):
-            model_1.addConstr(x.sum(j,'*') == 1, "E")
+            model_1.addConstr((x[j,2] + x[j,3] + x[j,4] + x[j,5]) == 1, "E")
         
         # f_i + p_j - f_j <= M(1 - y_ij)
         for i in range(1, jobLen):
-            for j in range(i, jobLen):
-                model_1.addConstr((f[i] + sum(processing_time[j-1]) - f[j]) <= M*(1-y[i,j]), "F")
+            for j in range(1, jobLen):
+                if i != j:
+                    model_1.addConstr((f[i] + sum(processing_time[j-1]) - f[j]) <= M*(1-y[i,j]), "F")
         
         # f_j >= p_j + C
         for j in range(1, jobLen):
-            model_1.addConstr(f[j] >= (sum(processing_time[j-1]) + 200), "G")
+            model_1.addConstr(f[j] >= (sum(processing_time[j-1])), "G")
         
         # x_j1 <= Typej
         # for j in range(1, jobLen):
@@ -151,6 +158,7 @@ def P1_Solve():
         # print("\nFinish time:")
         # for ff in f:
         #     print(f[ff].varName,'=',f[ff].X)
+        
         # head of the result table
 
         t_result = model_1.ObjVal
@@ -182,43 +190,47 @@ def P1_Solve():
         model_2.setObjective(w, gb.GRB.MINIMIZE) 
         
         # Add constraints and name them
-        jobLen, machineLen = len(job[i_count])+1, len(machine)+1
+        jobLen, machineLen = len(job[i_count])+1, len(machine)+2
 
         # fj - dj <= M*tj
         M = 99999
         for j in range(1,jobLen):
-            model_2.addConstr(f[j] - due_time[j-1] <= M*t[j])
+            model_2.addConstr(f[j] - due_time[j-1] <= M*t[j], "A")
 
         # x_ik + x_jk >= 2*(y_ij + y_ji) forall i, j 
-        for i in range(1,jobLen):
-            for j in range(i+1,jobLen):
-                for k in range(2,machineLen):
-                    model_2.addConstr((x[i,k] + x[j,k] >= 2*(y[i,j]+y[j,i])), "B")
+        # for k in range(2,machineLen):
+        #     for i in range(1,jobLen):
+        #         for j in range(1,jobLen):
+        #             if i != j:
+        #                 model_2.addConstr((x[i,k] + x[j,k] >= 2*(y[i,j]+y[j,i])), "B")
 
 
         # x_ik + x_jk - 1 <= y_ij + y_ji forall i, j, k
         for k in range(2, machineLen):
             for i in range(1, jobLen):
-                for j in range(i, jobLen):
-                    model_2.addConstr((x[i,k] + x[j,k] - 1) <= (y[i,j] + y[j,i]), "C")  
+                for j in range(1, jobLen):
+                    if i != j:
+                        model_2.addConstr((x[i,k] + x[j,k] - 1) <= (y[i,j] + y[j,i]), "C")  
         
         # y_ij + y_ji <= 1 forall i, j
         for i in range(1, jobLen):
-            for j in range(i, jobLen):
-                model_2.addConstr((y[i,j] + y[j,i]) <= 1, "D")
+            for j in range(1, jobLen):
+                if i != j:
+                    model_2.addConstr((y[i,j] + y[j,i]) <= 1, "D")
         
         #sigma(x_jk) = 1 forall j
         for j in range(1,jobLen):
-            model_2.addConstr(x.sum(j,'*') == 1, "E")
+            model_2.addConstr((x[j,2] + x[j,3] + x[j,4] + x[j,5]) == 1, "E")
         
         # f_i + p_j - f_j <= M(1 - y_ij)
         for i in range(1, jobLen):
-            for j in range(i, jobLen):
-                model_2.addConstr((f[i] + sum(processing_time[j-1]) - f[j]) <= M*(1-y[i,j]), "F")
+            for j in range(1, jobLen):
+                if i != j:
+                    model_2.addConstr((f[i] + sum(processing_time[j-1]) - f[j]) <= M*(1-y[i,j]), "F")
         
         # f_j >= p_j + C
         for j in range(1, jobLen):
-            model_2.addConstr(f[j] >= (sum(processing_time[j-1]) + 200), "G")
+            model_2.addConstr(f[j] >= (sum(processing_time[j-1])), "G")
         
         # sum(tj) <= t
         model_2.addConstr(t.sum() <= t_result, "H")
@@ -254,4 +266,4 @@ def P1_Solve():
         makespan_result.append([real_w_hour,real_w_min])
     return tardy_result, makespan_result
         
-# P1_Solve()
+P1_Solve()
